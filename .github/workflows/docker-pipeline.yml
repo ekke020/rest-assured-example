@@ -20,6 +20,9 @@ env:
 jobs:
   build-and-push-image:
     runs-on: ubuntu-latest
+    outputs:
+      tags: ${{ steps.meta.outputs.tags }}
+
     permissions:
       contents: read
       packages: write
@@ -49,13 +52,19 @@ jobs:
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
 
+  output-demo:
+    runs-on: ubuntu-latest
+    needs: build-and-push-image
+    steps:
+      - run: echo ${{needs.build-and-push-image.outputs.tags}}
+
   integration-tests:
     runs-on: ubuntu-latest
     needs: build-and-push-image
 
     services:
       web:
-        image: ghcr.io/${{ github.repository }}:${{ github.head_ref || github.ref_name }}
+        image: ${{needs.build-and-push-image.outputs.tags}}
         ports:
           - 8080:80
 
@@ -68,3 +77,27 @@ jobs:
 
       - name: Run Tests
         run: mvn clean verify -DskipSurefire=true
+
+  azure-deploy:
+    runs-on: ubuntu-latest
+    needs:
+      - integration-tests
+      - build-and-push-image
+    steps:
+      - name: "Login via Azure CLI"
+        uses: azure/login@v1
+        with:
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
+
+      - run: echo ${{needs.build-and-push-image.outputs.tags}}
+
+      - name: "Deploy to Azure Container Instances"
+        uses: "azure/aci-deploy@v1"
+        with:
+          resource-group: demo-java
+          image: ${{needs.build-and-push-image.outputs.tags}}
+          cpu: 1 #Optional
+          memory: 1 #Optional
+          dns-name-label: demo-java-robert-alfwar
+          name: demo-java-robert-alfwar
+          location: "Sweden Central"
