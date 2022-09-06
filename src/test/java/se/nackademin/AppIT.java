@@ -20,6 +20,6 @@ public class AppIT {
     public void validates_hello_message() {
         when().get().then()
                 .statusCode(200)
-                .body("html.head.title", equalTo("Welcome to Nackademin!"));
+                .body("html.head.title", equalTo("Welcome to nginx!"));
     }
 }
