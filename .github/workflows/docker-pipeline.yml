@@ -76,7 +76,7 @@ jobs:
           java-version: "17"
 
       - name: Run Tests
-        run: mvn clean verify -DskipSurefire=true
+        run: mvn clean verify -B -DskipSurefire=true
 
   azure-deploy:
     runs-on: ubuntu-latest
